@@ -3,168 +3,179 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gift for Frank</title>
+    <title>A Gift for Frank</title>
     <style>
-        /* Base Styles */
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
         body {
-            background-color: #f8fafc;
+            background-color: #f4f7f6;
             height: 100vh;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            text-align: center;
             overflow: hidden;
+            text-align: center;
+            transition: background-color 0.5s ease;
         }
 
-        /* Bold Header */
+        /* The Blackout State */
+        body.blackout {
+            background-color: black !important;
+        }
+
         h1 {
-            font-size: 2.2rem;
-            color: #1a202c;
-            margin-bottom: 30px;
+            font-size: 2rem;
+            margin-bottom: 20px;
+            color: #333;
             transition: opacity 0.5s;
         }
 
-        /* Gift Box & Cat Container */
-        .gift-wrapper {
-            position: relative;
+        .gift-container {
             cursor: pointer;
-            width: 150px;
-            height: 150px;
+            font-size: 80px;
+            user-select: none;
+            position: relative;
+            height: 120px;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: transform 0.2s ease-in-out;
+            /* Added smooth transition for the "dodging" movement */
+            transition: transform 0.1s ease-out; 
         }
 
-        .gift-wrapper:hover {
-            transform: scale(1.1);
-        }
-
-        #boxEmoji {
-            font-size: 100px;
-            z-index: 2;
-            position: relative;
-        }
-
-        /* Cat Pop-out Logic */
         .cat {
-            font-size: 70px;
+            font-size: 60px;
             position: absolute;
-            bottom: 20px;
+            bottom: 0;
             opacity: 0;
-            z-index: 1;
-            /* Starts white-ish */
-            filter: brightness(2) grayscale(1);
-            transition: 
-                transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), 
-                opacity 0.3s ease,
-                filter 1.5s ease; /* Smooth color shift */
+            transform: translateY(20px);
+            transition: filter 1.5s ease, transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s;
+            filter: brightness(2) grayscale(1); 
         }
 
-        /* Revealed State */
-        .revealed .cat {
+        .reveal .cat {
             opacity: 1;
-            transform: translateY(-90px);
+            transform: translateY(-70px);
         }
 
-        /* Black Cat State */
-        .cat.black {
+        .cat.turn-black {
             filter: brightness(0) grayscale(1);
         }
 
-        /* Sub-text */
-        .sub-text {
-            margin-top: 20px;
-            font-size: 1.1rem;
-            color: #4a5568;
+        .instruction {
+            margin-top: 15px;
+            font-size: 1.2rem;
+            color: #666;
             font-weight: 500;
         }
 
-        /* Prank Messages */
-        .prank-container {
-            margin-top: 25px;
+        #prank-message {
+            margin-top: 20px;
+            font-weight: bold;
+            font-size: 1.3rem;
+            color: #d9534f;
             display: none;
-            flex-direction: column;
-            gap: 10px;
+            max-width: 80%;
         }
 
-        .main-prank {
+        /* Final Bank Message */
+        #bank-msg {
+            display: none;
+            color: white;
+            font-size: 2rem;
             font-weight: bold;
-            font-size: 1.4rem;
-            color: #e53e3e;
+            z-index: 100;
         }
 
-        .bank-alert {
-            font-weight: bold;
-            font-size: 1.1rem;
-            color: #2d3748;
-            opacity: 0;
-            transition: opacity 0.8s ease;
-        }
-
-        /* Footer */
         footer {
-            position: fixed;
+            position: absolute;
             bottom: 20px;
-            font-size: 0.75rem;
-            opacity: 0.5;
-            color: #718096;
+            font-size: 0.8rem;
+            opacity: 0.6;
+            color: #888;
         }
     </style>
 </head>
-<body>
+<body id="mainBody">
 
-    <h1 id="header"><b>Here is your gift</b></h1>
+    <h1 id="header-text"><b>Here is your gift</b></h1>
 
-    <div class="gift-wrapper" id="giftTrigger" onclick="startPrank()">
-        <span class="cat" id="cat">🐱</span>
+    <div class="gift-container" id="giftBox" onclick="handleInteraction()">
+        <span class="cat" id="catEmoji">🐱</span>
         <span id="boxEmoji">🎁</span>
     </div>
 
-    <p class="sub-text" id="instruction">Plzz claim</p>
+    <p class="instruction" id="sub-text">Plzz claim</p>
 
-    <div class="prank-container" id="prankSection">
-        <p class="main-prank">Got you 😼<br>kat gaya aapka link pe aa kar meethe</p>
-        <p class="bank-alert" id="bankAlert">P.S. check your bank account 😉</p>
+    <div id="prank-message">
+        Got you 😼<br>kat gaya aapka link pe aa kar meethe
     </div>
 
-    <footer>
+    <div id="bank-msg">check your bank account ✌️</div>
+
+    <footer id="footer">
         Designed by me ofcourse — Aditya
     </footer>
 
     <script>
-        function startPrank() {
-            const wrapper = document.getElementById('giftTrigger');
-            const cat = document.getElementById('cat');
-            const prankSection = document.getElementById('prankSection');
-            const instruction = document.getElementById('instruction');
-            const bankAlert = document.getElementById('bankAlert');
+        let clickCount = 0;
+        const maxDodges = 10;
 
-            // Disable further clicks
-            wrapper.onclick = null;
-            wrapper.style.cursor = "default";
+        function handleInteraction() {
+            const container = document.getElementById('giftBox');
+            
+            if (clickCount < maxDodges) {
+                // 1. Dodge Logic: Move the box to a random nearby position
+                const randomX = (Math.random() - 0.5) * 200; // moves left or right
+                const randomY = (Math.random() - 0.5) * 200; // moves up or down
+                container.style.transform = `translate(${randomX}px, ${randomY}px)`;
+                clickCount++;
+            } else {
+                // 2. Success Logic: Reset position and reveal
+                container.style.transform = `translate(0, 0)`;
+                container.onclick = null; 
+                revealGift();
+            }
+        }
 
-            // 1. Pop the cat
-            wrapper.classList.add('revealed');
-            instruction.style.display = 'none';
+        function revealGift() {
+            const container = document.getElementById('giftBox');
+            const cat = document.getElementById('catEmoji');
+            const prankMsg = document.getElementById('prank-message');
+            const subText = document.getElementById('sub-text');
+            const body = document.getElementById('mainBody');
+            const header = document.getElementById('header-text');
+            const footer = document.getElementById('footer');
+            const bankMsg = document.getElementById('bank-msg');
 
-            // 2. Wait 1.5s to turn black and show first message
+            container.classList.add('reveal');
+            
             setTimeout(() => {
-                cat.classList.add('black');
-                prankSection.style.display = 'flex';
-                
-                // 3. Final "Bank Account" hit after a small delay
+                // Change cat to black
+                cat.classList.add('turn-black');
+                prankMsg.style.display = 'block';
+                subText.style.display = 'none';
+
+                // 3. Final Sequence: Blackout and Bank Message
                 setTimeout(() => {
-                    bankAlert.style.opacity = '1';
-                }, 1000);
+                    // Fade out everything
+                    container.style.display = 'none';
+                    prankMsg.style.display = 'none';
+                    header.style.display = 'none';
+                    footer.style.display = 'none';
+                    
+                    // Trigger Blackout
+                    body.classList.add('blackout');
+                    
+                    // Show final text
+                    bankMsg.style.display = 'block';
+                }, 3000); // Wait 3 seconds after the cat turns black
 
             }, 1500);
         }
